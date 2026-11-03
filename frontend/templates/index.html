@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day Trader Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230D1B22'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='%233DB88A' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700&family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<div id="app">
+  <!-- Session ribbon -->
+  <header class="ribbon" id="ribbon">
+    <div class="ribbon-inner">
+      <div class="ribbon-day">
+        <span class="ribbon-label">US session</span>
+        <span class="ribbon-status" id="ribbon-status">--</span>
+      </div>
+      <div class="ribbon-timeline" id="ribbon-timeline" role="presentation"></div>
+      <div class="ribbon-times">
+        <span class="ribbon-time" id="ribbon-time-ist">IST: --</span>
+        <span class="ribbon-time" id="ribbon-time-ny">NY: --</span>
+      </div>
+      <div class="ribbon-countdown" id="ribbon-countdown">Next open: --</div>
+      <div class="ribbon-right">
+        <span class="ribbon-mode" id="ribbon-mode">Demo</span>
+        <button class="icon-btn ribbon-theme" id="btn-theme" title="Switch to light theme" aria-label="Switch theme">◐</button>
+      </div>
+    </div>
+    <div class="ribbon-notice">
+      Not financial advice. Data is free, unofficial and may lag. Most day traders lose money.
+    </div>
+  </header>
+
+  <div class="shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">Day Trader Desk</div>
+      <nav class="sidebar-nav" id="sidebar-nav" aria-label="Main"></nav>
+      <div class="sidebar-footer">
+        <button class="icon-btn" id="btn-command" title="Command palette (Ctrl+K)" aria-label="Open command palette">⌘K</button>
+        <button class="icon-btn" id="btn-settings" title="Settings" aria-label="Settings">⚙</button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main" id="main" tabindex="-1">
+      <div class="page-header">
+        <h1 class="page-title" id="page-title">Scanner</h1>
+        <nav class="breadcrumbs" id="breadcrumbs" aria-label="Breadcrumb"></nav>
+      </div>
+
+      <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+      <!-- Page: Scanner -->
+      <section class="page" id="page-scanner" style="display:none">
+        <div class="page-toolbar">
+          <button class="btn btn-primary" id="btn-scan-daily">Run daily scan</button>
+          <button class="btn" id="btn-scan-orb">Run opening-range scan</button>
+          <span class="mode-chip" id="mode-chip">
+            <span class="mode-dot" id="mode-dot"></span>
+            <span class="mode-chip-text" id="mode-chip-text">Demo mode</span>
+          </span>
+          <span class="toolbar-note" id="scanner-meta"></span>
+        </div>
+        <div class="scanner-grid">
+          <div class="scanner-table-wrap">
+            <div class="table-scroll">
+              <table class="data-table" id="scanner-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th><th>Setup</th><th>Price</th><th>RSI</th><th>Close date</th><th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="scanner-tbody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="scanner-empty" style="display:none">
+              <p>No scans yet. Run a daily or opening-range scan to see setups.</p>
+            </div>
+          </div>
+          <div class="scanner-side">
+            <div class="card">
+              <h3>Symbol detail</h3>
+              <div class="mini-chart" id="mini-chart">Select a symbol from the table</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: News -->
+      <section class="page" id="page-news" style="display:none">
+        <div class="page-toolbar">
+          <button class="btn btn-primary" id="btn-news-check">Check news</button>
+          <span class="toolbar-note" id="news-source"></span>
+        </div>
+        <div class="news-feed" id="news-feed"></div>
+        <div class="empty-state" id="news-empty" style="display:none">
+          <p>No news yet. Add a ticker to the watchlist, or run a scan, then check again.</p>
+        </div>
+      </section>
+
+      <!-- Page: Trade planner -->
+      <section class="page" id="page-planner" style="display:none">
+        <div class="page-toolbar">
+          <div class="stepper" id="planner-stepper"></div>
+        </div>
+        <div class="planner-grid">
+          <div class="planner-main">
+            <div class="card">
+              <h3>Entry status</h3>
+              <div id="entry-status-card">Pick a ticker to begin.</div>
+            </div>
+            <div class="card chart-card">
+              <h3>Price levels</h3>
+              <div class="price-chart" id="price-chart"></div>
+            </div>
+          </div>
+          <div class="planner-side">
+            <div class="card">
+              <h3>Set exit plan</h3>
+              <form id="exit-form" class="form">
+                <div class="field">
+                  <label for="plan-entry">Entry price</label>
+                  <input type="number" id="plan-entry" step="0.01">
+                </div>
+                <div class="field">
+                  <label for="plan-stop-rule">Stop rule</label>
+                  <select id="plan-stop-rule">
+                    <option value="or-mid">Opening-range midpoint</option>
+                    <option value="or-low">Opening-range low</option>
+                    <option value="pct">Percent under entry</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="plan-stop-value">Stop value</label>
+                  <input type="number" id="plan-stop-value" step="0.01" placeholder="e.g. 1 for 1%">
+                </div>
+                <div class="field">
+                  <label for="plan-target">Target</label>
+                  <select id="plan-target">
+                    <option value="2R">2R</option>
+                    <option value="1R">1R</option>
+                    <option value="1.5R">1.5R</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="plan-or-high">OR high</label>
+                  <input type="number" id="plan-or-high" step="0.01">
+                </div>
+                <div class="field">
+                  <label for="plan-or-low">OR low</label>
+                  <input type="number" id="plan-or-low" step="0.01">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-plan-save">Save plan</button>
+                <div id="exit-form-error"></div>
+              </form>
+              <div id="plan-summary"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Time Machine -->
+      <section class="page" id="page-timemachine" style="display:none">
+        <div class="page-toolbar">
+          <button class="btn btn-primary" id="btn-tm-run">Run simulation</button>
+          <span class="toolbar-note" id="tm-plan-note"></span>
+        </div>
+        <div class="tm-grid">
+          <div class="tm-main">
+            <div class="card">
+              <h3>Fan chart</h3>
+              <div class="fan-chart" id="fan-chart">Run a simulation to draw the fan chart.</div>
+            </div>
+          </div>
+          <div class="tm-side">
+            <div class="card">
+              <h3>Odds</h3>
+              <div class="odds-bar" id="odds-bar"></div>
+              <div class="verdict" id="tm-verdict">Run a simulation to see the odds.</div>
+            </div>
+            <div class="card">
+              <h3>History</h3>
+              <div class="table-scroll">
+                <table class="data-table small" id="tm-history">
+                  <thead><tr><th>Symbol</th><th>Target first</th><th>Stop first</th><th>Neither</th><th>Verdict</th></tr></thead>
+                  <tbody id="tm-history-tbody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state small" id="tm-history-empty" style="display:none"><p>No simulations yet.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Size and risk -->
+      <section class="page" id="page-size-risk" style="display:none">
+        <div class="page-toolbar">
+          <button class="btn" id="btn-size-run">Calculate size</button>
+          <button class="btn" id="btn-risk-run">Run risk check</button>
+          <span class="toolbar-note" id="sr-plan-note"></span>
+        </div>
+        <div class="sr-grid">
+          <div class="sr-left">
+            <div class="card">
+              <h3>Inputs</h3>
+              <form id="size-form" class="form">
+                <div class="field">
+                  <label for="size-budget">Budget ($)</label>
+                  <input type="number" id="size-budget" value="5000" step="100">
+                </div>
+                <div class="field">
+                  <label for="size-max-loss">Max loss per trade ($)</label>
+                  <input type="number" id="size-max-loss" value="50" step="5">
+                </div>
+                <div class="field">
+                  <label for="size-entry">Entry price</label>
+                  <input type="number" id="size-entry" step="0.01">
+                </div>
+                <div class="field">
+                  <label for="size-stop">Stop price</label>
+                  <input type="number" id="size-stop" step="0.01">
+                </div>
+                <div class="field">
+                  <label for="size-target">Target price</label>
+                  <input type="number" id="size-target" step="0.01">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-size-calc">Calculate</button>
+              </form>
+            </div>
+          </div>
+          <div class="sr-right">
+            <div class="card">
+              <h3>Result</h3>
+              <div id="size-result">
+                <div class="size-big" id="size-shares">-- shares</div>
+                <div class="size-rule" id="size-rule">No sizing yet.</div>
+                <div class="size-verdict" id="size-verdict">Run a calculation to size the trade.</div>
+                <ul class="limit-list" id="size-limits"></ul>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Risk verdict</h3>
+              <div id="risk-result" class="risk-result">Run a risk check to see the verdict.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Alerts -->
+      <section class="page" id="page-alerts" style="display:none">
+        <div class="page-toolbar">
+          <button class="btn" id="btn-alerts-check">Check alerts</button>
+          <span class="toolbar-note" id="alerts-clock-note"></span>
+        </div>
+        <div class="alerts-grid">
+          <div class="alerts-list-wrap">
+            <h3>Alert rules</h3>
+            <div class="table-scroll">
+              <table class="data-table small" id="alerts-table">
+                <thead><tr><th>Rule</th><th>Symbol</th><th>Type</th><th>Level</th><th>State</th><th>Action</th></tr></thead>
+                <tbody id="alerts-tbody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state small" id="alerts-empty" style="display:none">
+              <p>No alert rules yet. Add one on the right.</p>
+            </div>
+            <div class="card" id="alerts-ring-card" style="display:none">
+              <h3>What rang</h3>
+              <div id="alerts-rings"></div>
+            </div>
+          </div>
+          <div class="alerts-add-wrap">
+            <div class="card">
+              <h3>Add alert</h3>
+              <form id="alert-form" class="form">
+                <div class="field">
+                  <label for="alert-id">Rule ID</label>
+                  <input type="text" id="alert-id" placeholder="tsla-stop">
+                </div>
+                <div class="field">
+                  <label for="alert-symbol">Symbol</label>
+                  <input type="text" id="alert-symbol" placeholder="TSLA">
+                </div>
+                <div class="field">
+                  <label for="alert-type">Type</label>
+                  <select id="alert-type">
+                    <option value="above">Above / target</option>
+                    <option value="below">Below</option>
+                    <option value="pct">Percent move</option>
+                    <option value="time">Time of day</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="alert-level" id="alert-level-label">Level / price</label>
+                  <input type="text" id="alert-level" placeholder="358.32">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-alert-add">Add alert</button>
+                <div id="alert-form-error"></div>
+              </form>
+              <button class="btn btn-block" id="btn-alert-from-plan" style="margin-top:0.75rem">Use current plan</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Page: Earnings -->
+      <section class="page" id="page-earnings" style="display:none">
+        <div class="page-toolbar">
+          <div class="field inline">
+            <label for="earnings-tickers">Tickers</label>
+            <input type="text" id="earnings-tickers" placeholder="AAPL, KO">
+          </div>
+          <button class="btn btn-primary" id="btn-earnings">Fetch earnings</button>
+        </div>
+        <div class="earnings-wrap" id="earnings-wrap"></div>
+        <div class="empty-state" id="earnings-empty">
+          <p>Enter tickers and fetch earnings. Demo mode has AAPL and KO.</p>
+        </div>
+      </section>
+
+      <!-- Page: Congress trades -->
+      <section class="page" id="page-congress" style="display:none">
+        <div class="page-toolbar">
+          <div class="field inline">
+            <label for="congress-member">Member</label>
+            <input type="text" id="congress-member" placeholder="Pelosi">
+          </div>
+          <button class="btn btn-primary" id="btn-congress">Fetch filings</button>
+        </div>
+        <div class="congress-wrap" id="congress-wrap"></div>
+        <div class="empty-state" id="congress-empty">
+          <p>Search a member to see their trade disclosures.</p>
+        </div>
+      </section>
+
+      <!-- Page: Settings -->
+      <section class="page" id="page-settings" style="display:none">
+        <div class="settings-wrap" id="settings-wrap">
+          <div class="empty-state"><p>Loading settings…</p></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Mobile tab bar -->
+  <nav class="mobile-tabs" id="mobile-tabs" aria-label="Primary"></nav>
+
+  <!-- Command palette -->
+  <div class="command-palette" id="command-palette" style="display:none" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="command-palette-inner">
+      <input type="text" id="command-input" placeholder="Go to page…" aria-label="Search pages">
+      <div class="command-results" id="command-results"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
